@@ -3,6 +3,7 @@ import * as Yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useAuth } from "../../context/useAuth";
 import { useForm } from "react-hook-form";
+import { Link } from "react-router-dom";
 
 type Props = {};
 
@@ -25,17 +26,6 @@ const LoginPage = (props: Props) => {
   } = useForm<LoginFormsInputs>({
     resolver: yupResolver(validation),
   });
-
-  // Inject the Google Fonts link only on the login page
-  useEffect(() => {
-    const link = document.createElement("link");
-
-    document.head.appendChild(link);
-
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, []);
 
   const handleLogin = (form: LoginFormsInputs) => {
     loginUser(form.userName, form.password);
@@ -90,9 +80,9 @@ const LoginPage = (props: Props) => {
               </button>
               <p className="mt-3 small text-center">
                 Don’t have an account yet?{" "}
-                <a href="#" className="text-decoration-underline">
+                <Link to="/register" className="text-decoration-underline">
                   Sign up
-                </a>
+                </Link>
               </p>
             </form>
           </div>

@@ -3,6 +3,7 @@ import * as Yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useAuth } from "../../context/useAuth";
 import { useForm } from "react-hook-form";
+import { Link } from "react-router-dom";
 
 type Props = {};
 
@@ -28,18 +29,7 @@ const RegisterPage = (props: Props) => {
     resolver: yupResolver(validation),
   });
 
-  // Inject the Google Fonts link only on the login page
-  useEffect(() => {
-    const link = document.createElement("link");
-
-    document.head.appendChild(link);
-
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, []);
-
-  const handleLogin = (form: RegisterFormsInputs) => {
+  const handleRegister = (form: RegisterFormsInputs) => {
     registerUser(form.email, form.userName, form.password);
   };
 
@@ -48,10 +38,8 @@ const RegisterPage = (props: Props) => {
       <div className="container d-flex justify-content-center align-items-center min-vh-100">
         <div className="card shadow-sm w-100" style={{ maxWidth: "400px" }}>
           <div className="card-body">
-            <h1 className="card-title text-center mb-4">
-              Sign in to your account
-            </h1>
-            <form onSubmit={handleSubmit(handleLogin)}>
+            <h1 className="card-title text-center mb-4">Create an account</h1>
+            <form onSubmit={handleSubmit(handleRegister)}>
               <div className="mb-3">
                 <label htmlFor="email" className="form-label">
                   Email
@@ -97,19 +85,14 @@ const RegisterPage = (props: Props) => {
                   <p className="text-danger">{errors.password.message}</p>
                 )}
               </div>
-              <div className="d-flex justify-content-between mb-3">
-                <a href="#" className="small">
-                  Forgot password?
-                </a>
-              </div>
               <button type="submit" className="btn btn-primary w-100">
-                Sign in
+                Sign up
               </button>
               <p className="mt-3 small text-center">
-                Don’t have an account yet?{" "}
-                <a href="#" className="text-decoration-underline">
-                  Sign up
-                </a>
+                Already have an account?{" "}
+                <Link to="/login" className="text-decoration-underline">
+                  Sign in
+                </Link>
               </p>
             </form>
           </div>

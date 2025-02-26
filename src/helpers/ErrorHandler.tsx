@@ -13,6 +13,13 @@ export const handleError = (error: any) => {
         return;
       }
 
+      if (error.response?.status === 400) {
+        // Check if the response contains a specific error message
+        const errorMessage =
+          error.response.data?.message || "User already exists";
+        toast.warning(errorMessage);
+      }
+
       // Then handle other error formats
       if (Array.isArray(response.data?.errors)) {
         response.data.errors.forEach((val: any) => {
