@@ -1,15 +1,15 @@
 .popup {
-    position: fixed;
+    position: fixed !important;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: rgba(0, 0, 0, 0.504);
 
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 999;
+    z-index: 9999;
 }
 
 .popup-inner {
@@ -35,5 +35,5 @@
 }
 
 .popup-inner .close-btn:hover {
-    background-color: rgba(187,45,59,255);
+    background-color: rgba(187, 45, 59, 255);
 }

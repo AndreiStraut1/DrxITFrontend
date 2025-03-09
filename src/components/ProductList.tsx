@@ -5,6 +5,16 @@ import PSHPopup from "./PSHPopup";
 import { Product } from "../models/Product";
 import { StageHistory } from "../models/StageHistory";
 import ProductStageHistory from "./ProductStageHistory";
+import { Select, SelectOption } from "./Select";
+
+const options = [
+  { label: "CONCEPT", value: 1 },
+  { label: "FEASIBILITY", value: 2 },
+  { label: "PROJECTION", value: 3 },
+  { label: "RETREAT", value: 4 },
+  { label: "STANDBY", value: 5 },
+  { label: "CANCEL", value: 6 },
+];
 
 interface ProductListProps {
   refresh: boolean;
@@ -15,6 +25,12 @@ const ProductList: React.FC<ProductListProps> = ({
   refresh,
   onMoveToNextStage,
 }) => {
+  const [selectedStagesMap, setSelectedStagesMap] = useState<
+    Record<number, SelectOption | undefined>
+  >({});
+  const [visibilityMap, setVisibilityMap] = useState<Record<number, boolean>>(
+    {}
+  );
   const [products, setProducts] = useState<Product[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [buttonPopup, setButtonPopup] = useState(false);
@@ -23,6 +39,45 @@ const ProductList: React.FC<ProductListProps> = ({
   );
   const { accessToken } = useAuth();
   const { user } = useAuth();
+
+  const handleStageSelectionChange = (
+    options: SelectOption | undefined,
+    stageId: number
+  ) => {
+    setSelectedStagesMap((prev) => ({
+      ...prev,
+      [stageId]: options,
+    }));
+  };
+
+  const handleSaveStage = (productId: number) => {
+    const selectedOption = selectedStagesMap[productId];
+    if (!selectedOption) return;
+
+    const stageLabel = selectedOption.label;
+    handleStagesChange(stageLabel, productId);
+  };
+
+  const handleStagesChange = (selectedStage: string, productId: number) => {
+    axios
+      .post(
+        `http://localhost:8080/api/products/${productId}/set-stage`,
+        { stage: selectedStage },
+        {
+          headers: accessToken
+            ? { Authorization: "Bearer " + accessToken }
+            : {},
+        }
+      )
+      .then(() => {
+        onMoveToNextStage();
+      })
+      .catch((err) => {
+        setError(
+          err.response ? JSON.stringify(err.response.data) : err.message
+        );
+      });
+  };
 
   useEffect(() => {
     axios
@@ -72,6 +127,13 @@ const ProductList: React.FC<ProductListProps> = ({
         );
       });
   }, [accessToken, refresh]);
+
+  const toggleVisibility = (prodId: number) => {
+    setVisibilityMap((prev) => ({
+      ...prev,
+      [prodId]: !prev[prodId],
+    }));
+  };
 
   const handleNextStage = (productId: number) => {
     axios
@@ -144,50 +206,78 @@ const ProductList: React.FC<ProductListProps> = ({
                     <strong>Height:</strong> {product.estimated_height}
                   </li>
                   <li className="list-group-item">
+                    <strong>Width:</strong> {product.estimated_width}
+                  </li>
+                  <li className="list-group-item">
                     <strong>Weight:</strong> {product.estimated_weight}
-                  </li>
-                  <li className="list-group-item">
-                    <strong>Width:</strong> {product.estimated_width}
-                  </li>
-                  <li className="list-group-item">
-                    <strong>Width:</strong> {product.estimated_width}
                   </li>
                   <li className="list-group-item">
                     <strong>Current Stage:</strong> {product.currentStage}
                   </li>
                 </ul>
-                <div className="card-footer text-center">
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => handleNextStage(product.id)}
-                  >
-                    Move to Next Stage
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => openStageHistory(product.id)}
-                  >
-                    Stage History
-                  </button>
-                  <PSHPopup trigger={buttonPopup} setTrigger={setButtonPopup}>
-                    {selectedProductId && (
-                      <ProductStageHistory
-                        productId={selectedProductId}
-                      ></ProductStageHistory>
-                    )}
-                  </PSHPopup>
-                  {isAdmin && (
+
+                <div className="card-footer d-flex flex-column align-items-center gap-2">
+                  <div className="col d-flex flex-column align-items-center">
                     <button
-                      className="btn btn-danger"
-                      onClick={() => handleDelete(product.id)}
+                      className="btn btn-primary w-100"
+                      onClick={() => handleNextStage(product.id)}
                     >
-                      Delete Product
+                      Next Stage
                     </button>
-                  )}
+
+                    <div className="mt-2 d-flex gap-2">
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => openStageHistory(product.id)}
+                      >
+                        Stage History
+                      </button>
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => toggleVisibility(product.id)}
+                      >
+                        {visibilityMap[product.id] ? "Hide" : "Stage"}
+                      </button>
+                    </div>
+
+                    {visibilityMap[product.id] && (
+                      <div className="mt-2 w-100 text-center">
+                        <Select
+                          options={options}
+                          value={selectedStagesMap[product.id]}
+                          onChange={(o) =>
+                            handleStageSelectionChange(o, product.id)
+                          }
+                        />
+                        <button
+                          className="btn btn-primary mt-2 w-100"
+                          onClick={() => handleSaveStage(product.id)}
+                        >
+                          Save Stage
+                        </button>
+                      </div>
+                    )}
+
+                    {isAdmin && (
+                      <button
+                        className="btn btn-danger mt-2 w-100"
+                        onClick={() => handleDelete(product.id)}
+                      >
+                        Delete Product
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           ))}
+          <PSHPopup trigger={buttonPopup} setTrigger={setButtonPopup}>
+            {selectedProductId && (
+              <ProductStageHistory
+                productId={selectedProductId}
+              ></ProductStageHistory>
+            )}
+          </PSHPopup>
         </div>
       )}
     </div>

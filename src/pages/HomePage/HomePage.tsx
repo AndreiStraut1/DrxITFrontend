@@ -10,6 +10,10 @@ const HomePage: React.FC = () => {
     navigate("/products");
   };
 
+  const handleUsers = () => {
+    navigate("/users");
+  };
+
   return (
     <div className="container mt-5">
       <div className="card shadow-sm">
@@ -31,6 +35,11 @@ const HomePage: React.FC = () => {
               <button className="btn btn-primary ms-2" onClick={handleProducts}>
                 View Products
               </button>
+              {user?.roles.includes("ROLE_ADMIN") && (
+                <button className="btn btn-primary ms-2" onClick={handleUsers}>
+                  View Users
+                </button>
+              )}
             </>
           )}
           <p>Thank you for logging in.</p>

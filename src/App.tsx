@@ -7,6 +7,7 @@ import RegisterPage from "./pages/RegisterPage/RegisterPage";
 import HomePage from "./pages/HomePage/HomePage"; // Assuming you have a HomePage component
 import ProductsPage from "./pages/ProductsPage/ProductsPage";
 import "./main.css";
+import UsersPage from "./pages/UsersPage/UsersPage";
 
 const RoutesComponent = () => {
   const { user } = useAuth();
@@ -21,6 +22,10 @@ const RoutesComponent = () => {
       <Route
         path="/products"
         element={user ? <ProductsPage /> : <Navigate to="/login" />}
+      />
+      <Route
+        path="/users"
+        element={user ? <UsersPage /> : <Navigate to="/login" />}
       />
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>
