@@ -1,3 +1,5 @@
+import { Bom } from "./Bom";
+
 export interface Product {
   id: number;
   name: string;
@@ -6,4 +8,5 @@ export interface Product {
   estimated_weight: number;
   estimated_width: number;
   currentStage?: string;
+  bom?: Bom;
 }

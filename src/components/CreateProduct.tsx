@@ -234,6 +234,21 @@ const CreateProduct: React.FC<CreateProductProps> = ({ onProductCreated }) => {
             </div>
 
             <div className="mb-4">
+              <h5>BOM Details</h5>
+              <div className="mb-3">
+                <label className="form-label">BOM Name</label>
+                <input
+                  type="text"
+                  name="bom.name"
+                  value={product.bom.name}
+                  onChange={handleChange}
+                  className="form-control"
+                  placeholder="Enter BOM name"
+                />
+              </div>
+            </div>
+
+            <div className="mb-4">
               <h5>BOM Materials</h5>
               <table className="table table-bordered">
                 <thead className="table-light">

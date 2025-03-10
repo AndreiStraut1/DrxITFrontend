@@ -6,14 +6,17 @@ import { Product } from "../models/Product";
 import { StageHistory } from "../models/StageHistory";
 import ProductStageHistory from "./ProductStageHistory";
 import { Select, SelectOption } from "./Select";
+import { Bom } from "../models/Bom";
+import BomList from "./BomList";
 
 const options = [
   { label: "CONCEPT", value: 1 },
   { label: "FEASIBILITY", value: 2 },
   { label: "PROJECTION", value: 3 },
-  { label: "RETREAT", value: 4 },
-  { label: "STANDBY", value: 5 },
-  { label: "CANCEL", value: 6 },
+  { label: "PRODUCTION", value: 4 },
+  { label: "RETREAT", value: 5 },
+  { label: "STANDBY", value: 6 },
+  { label: "CANCEL", value: 7 },
 ];
 
 interface ProductListProps {
@@ -39,6 +42,19 @@ const ProductList: React.FC<ProductListProps> = ({
   );
   const { accessToken } = useAuth();
   const { user } = useAuth();
+
+  const [bomPopup, setBomPopup] = useState(false);
+  const [selectedBom, setSelectedBom] = useState<Bom | null>(null);
+
+  const openBomPopup = (productId: number) => {
+    const product = products.find((p) => p.id === productId);
+    if (product && product.bom) {
+      setSelectedBom(product.bom);
+      setBomPopup(true);
+    } else {
+      setError("No BOM data available for this product");
+    }
+  };
 
   const handleStageSelectionChange = (
     options: SelectOption | undefined,
@@ -87,7 +103,9 @@ const ProductList: React.FC<ProductListProps> = ({
       .then((response) => {
         if (Array.isArray(response.data)) {
           const productsData: Product[] = response.data;
-          // For each product, fetch its current stage in parallel
+          const bomData: Bom[] = productsData
+            .map((x) => x.bom)
+            .filter((bom): bom is Bom => bom !== undefined);
           Promise.all(
             productsData.map((prod) =>
               axios
@@ -116,6 +134,7 @@ const ProductList: React.FC<ProductListProps> = ({
               currentStage: stages[index],
             }));
             setProducts(updatedProducts);
+            console.log(products);
           });
         } else {
           setError(response.data);
@@ -258,6 +277,13 @@ const ProductList: React.FC<ProductListProps> = ({
                       </div>
                     )}
 
+                    <button
+                      className="btn btn-primary mt-2 w-100"
+                      onClick={() => openBomPopup(product.id)}
+                    >
+                      View BOM
+                    </button>
+
                     {isAdmin && (
                       <button
                         className="btn btn-danger mt-2 w-100"
@@ -277,6 +303,9 @@ const ProductList: React.FC<ProductListProps> = ({
                 productId={selectedProductId}
               ></ProductStageHistory>
             )}
+          </PSHPopup>
+          <PSHPopup trigger={bomPopup} setTrigger={setBomPopup}>
+            {selectedBom && <BomList bomData={selectedBom} />}
           </PSHPopup>
         </div>
       )}

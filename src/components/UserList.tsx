@@ -176,7 +176,13 @@ const UserList: React.FC<UserListProps> = ({ refresh, onRoleChange }) => {
                       <Select
                         multiple
                         options={options}
-                        value={selectedRolesMap[user.id] || []}
+                        value={
+                          selectedRolesMap[user.id] ??
+                          user.roles.map(
+                            (role) =>
+                              options.find((opt) => opt.label === role.name)!
+                          )
+                        }
                         onChange={(o) => handleRoleSelectionChange(o, user.id)}
                       />
                       <button
