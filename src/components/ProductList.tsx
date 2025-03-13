@@ -8,6 +8,8 @@ import ProductStageHistory from "./ProductStageHistory";
 import { Select, SelectOption } from "./Select";
 import { Bom } from "../models/Bom";
 import BomList from "./BomList";
+import { toast } from "react-toastify";
+import ProductPdfExport from "./ProductsToPdf";
 
 const options = [
   { label: "CONCEPT", value: 1 },
@@ -28,6 +30,18 @@ const ProductList: React.FC<ProductListProps> = ({
   refresh,
   onMoveToNextStage,
 }) => {
+  const [filters, setFilters] = useState({
+    stages: [] as SelectOption[],
+    materials: [] as SelectOption[],
+    value: undefined as SelectOption | undefined,
+    minHeight: undefined as number | undefined,
+    maxHeight: undefined as number | undefined,
+    minWidth: undefined as number | undefined,
+    maxWidth: undefined as number | undefined,
+    minWeight: undefined as number | undefined,
+    maxWeight: undefined as number | undefined,
+    productName: undefined as string | undefined,
+  });
   const [selectedStagesMap, setSelectedStagesMap] = useState<
     Record<number, SelectOption | undefined>
   >({});
@@ -46,13 +60,105 @@ const ProductList: React.FC<ProductListProps> = ({
   const [bomPopup, setBomPopup] = useState(false);
   const [selectedBom, setSelectedBom] = useState<Bom | null>(null);
 
+  const getMaterialOptions = () => {
+    const uniqueMaterials = new Set<string>();
+
+    products.forEach((product) => {
+      if (product.bom && product.bom.bomMaterials) {
+        product.bom.bomMaterials.forEach((material) => {
+          uniqueMaterials.add(material.material.materialNumber);
+        });
+      }
+    });
+
+    return Array.from(uniqueMaterials).map((material, index) => ({
+      label: material,
+      value: index,
+    }));
+  };
+
+  const materialOptions = getMaterialOptions();
+
+  const filteredProducts = products.filter((product) => {
+    if (filters.stages.length > 0) {
+      const stageLabels = filters.stages.map((option) => option.label);
+      if (product.currentStage && !stageLabels.includes(product.currentStage)) {
+        return false;
+      }
+    }
+
+    if (filters.materials.length > 0) {
+      if (!product.bom || !product.bom.bomMaterials) return false;
+
+      const materialLabels = filters.materials.map((option) => option.label);
+      const productHasAnySelectedMaterial = product.bom.bomMaterials.some(
+        (bomMaterial) =>
+          materialLabels.includes(bomMaterial.material.materialNumber)
+      );
+
+      if (!productHasAnySelectedMaterial) {
+        return false;
+      }
+    }
+
+    if (
+      filters.minHeight !== undefined &&
+      product.estimated_height < filters.minHeight
+    ) {
+      return false;
+    }
+
+    if (
+      filters.maxHeight !== undefined &&
+      product.estimated_height > filters.maxHeight
+    ) {
+      return false;
+    }
+
+    if (
+      filters.minWidth !== undefined &&
+      product.estimated_width < filters.minWidth
+    ) {
+      return false;
+    }
+
+    if (
+      filters.maxWidth !== undefined &&
+      product.estimated_width > filters.maxWidth
+    ) {
+      return false;
+    }
+
+    if (
+      filters.minWeight !== undefined &&
+      product.estimated_weight < filters.minWeight
+    ) {
+      return false;
+    }
+    if (
+      filters.maxWeight !== undefined &&
+      product.estimated_weight > filters.maxWeight
+    ) {
+      return false;
+    }
+
+    if (
+      product.name
+        .toLowerCase()
+        .includes(filters.productName?.toLowerCase() || "") == false
+    ) {
+      return false;
+    }
+    return true;
+  });
+
   const openBomPopup = (productId: number) => {
     const product = products.find((p) => p.id === productId);
     if (product && product.bom) {
       setSelectedBom(product.bom);
       setBomPopup(true);
     } else {
-      setError("No BOM data available for this product");
+      toast.warning("No BOM data available for this product");
     }
   };
 
@@ -89,7 +195,7 @@ const ProductList: React.FC<ProductListProps> = ({
         onMoveToNextStage();
       })
       .catch((err) => {
-        setError(
+        toast.error(
           err.response ? JSON.stringify(err.response.data) : err.message
         );
       });
@@ -141,7 +247,7 @@ const ProductList: React.FC<ProductListProps> = ({
         }
       })
       .catch((err) => {
-        setError(
+        toast.error(
           err.response ? JSON.stringify(err.response.data) : err.message
         );
       });
@@ -169,7 +275,7 @@ const ProductList: React.FC<ProductListProps> = ({
         onMoveToNextStage();
       })
       .catch((err) => {
-        setError(
+        toast.error(
           err.response ? JSON.stringify(err.response.data) : err.message
         );
       });
@@ -188,7 +294,7 @@ const ProductList: React.FC<ProductListProps> = ({
         setProducts(products.filter((product) => product.id !== productId)); // Remove product from UI
       })
       .catch((err) => {
-        setError(
+        toast.error(
           err.response ? JSON.stringify(err.response.data) : err.message
         );
       });
@@ -209,11 +315,141 @@ const ProductList: React.FC<ProductListProps> = ({
           Error: {error}
         </div>
       )}
+      <div className="container mt-3">
+        <h2 className="mb-4">Products</h2>
+        {error && <div className="alert alert-danger">Error: {error}</div>}
+
+        <div className="card p-4">
+          <h5 className="card-title">Filter Products</h5>
+
+          <div className="row">
+            <div className="col-md-6">
+              <label className="form-label">Filter by Stages</label>
+              <Select
+                multiple
+                options={options}
+                value={filters.stages}
+                onChange={(selections) =>
+                  setFilters({ ...filters, stages: selections })
+                }
+              />
+            </div>
+
+            <div className="col-md-6">
+              <label className="form-label">Filter by Materials</label>
+              <Select
+                multiple
+                options={materialOptions}
+                value={filters.materials}
+                onChange={(selections) =>
+                  setFilters({ ...filters, materials: selections })
+                }
+              />
+            </div>
+          </div>
+
+          {/* Dimensions Filters */}
+          <h6 className="mt-4">Filter by Dimensions</h6>
+          <div className="row">
+            {["Height", "Width", "Weight"].map((dim) => (
+              <div className="col-md-4" key={dim}>
+                <label className="form-label">{dim}</label>
+                <div className="input-group mb-2">
+                  <input
+                    type="number"
+                    min="0"
+                    className="form-control"
+                    placeholder={`Min ${dim}`}
+                    value={
+                      filters[`min${dim as "Height" | "Width" | "Weight"}`] ||
+                      ""
+                    }
+                    onChange={(e) =>
+                      setFilters({
+                        ...filters,
+                        [`min${dim}`]: Number(e.target.value) || undefined,
+                      })
+                    }
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    className="form-control"
+                    placeholder={`Max ${dim}`}
+                    value={
+                      filters[`max${dim as "Height" | "Width" | "Weight"}`] ||
+                      ""
+                    }
+                    onChange={(e) =>
+                      setFilters({
+                        ...filters,
+                        [`max${dim}`]: Number(e.target.value) || undefined,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Search Bar */}
+          <div className="row mt-3">
+            <div className="col-md-6">
+              <label className="form-label">Search Product</label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Product name"
+                value={filters.productName || ""}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    productName: e.target.value || undefined,
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="mt-4">
+            <button
+              className="btn btn-outline-danger"
+              onClick={() =>
+                setFilters({
+                  stages: [],
+                  materials: [],
+                  value: undefined,
+                  minHeight: undefined,
+                  maxHeight: undefined,
+                  minWidth: undefined,
+                  maxWidth: undefined,
+                  minWeight: undefined,
+                  maxWeight: undefined,
+                  productName: undefined,
+                })
+              }
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="prodNr">
+        <p>Number of products: {filteredProducts.length}</p>
+      </div>
+
+      <ProductPdfExport products={filteredProducts} />
       {products.length === 0 && !error ? (
         <p>No products available.</p>
+      ) : filteredProducts.length === 0 ? (
+        <div className="alert alert-warning">
+          No products match your filter criteria.
+        </div>
       ) : (
         <div className="row">
-          {products.map((product) => (
+          {filteredProducts.map((product) => (
             <div key={product.id} className="col-md-4 mb-3">
               <div className="card h-100">
                 <div className="card-body">

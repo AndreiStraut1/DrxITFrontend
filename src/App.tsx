@@ -8,6 +8,7 @@ import HomePage from "./pages/HomePage/HomePage"; // Assuming you have a HomePag
 import ProductsPage from "./pages/ProductsPage/ProductsPage";
 import "./main.css";
 import UsersPage from "./pages/UsersPage/UsersPage";
+import DashboardPage from "./pages/DashboardPage/DashboardPage";
 
 const RoutesComponent = () => {
   const { user } = useAuth();
@@ -26,6 +27,10 @@ const RoutesComponent = () => {
       <Route
         path="/users"
         element={user ? <UsersPage /> : <Navigate to="/login" />}
+      />
+      <Route
+        path="/dashboard"
+        element={user ? <DashboardPage /> : <Navigate to="/login" />}
       />
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>

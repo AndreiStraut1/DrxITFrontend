@@ -14,6 +14,10 @@ const HomePage: React.FC = () => {
     navigate("/users");
   };
 
+  const handleDashboard = () => {
+    navigate("/dashboard");
+  };
+
   return (
     <div className="container mt-5">
       <div className="card shadow-sm">
@@ -38,6 +42,11 @@ const HomePage: React.FC = () => {
               {user?.roles.includes("ROLE_ADMIN") && (
                 <button className="btn btn-primary ms-2" onClick={handleUsers}>
                   View Users
+                </button>
+              )}
+              {user?.roles.includes("ROLE_ADMIN") && (
+                <button className="btn btn-info ms-2" onClick={handleDashboard}>
+                  Analytics Dashboard
                 </button>
               )}
             </>
