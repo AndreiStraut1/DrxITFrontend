@@ -4,33 +4,40 @@ import "react-toastify/dist/ReactToastify.css";
 import { UserProvider, useAuth } from "./context/useAuth";
 import LoginPage from "./pages/LoginPage/LoginPage";
 import RegisterPage from "./pages/RegisterPage/RegisterPage";
-import HomePage from "./pages/HomePage/HomePage"; // Assuming you have a HomePage component
+import HomePage from "./pages/HomePage/HomePage";
 import ProductsPage from "./pages/ProductsPage/ProductsPage";
-import "./main.css";
 import UsersPage from "./pages/UsersPage/UsersPage";
 import DashboardPage from "./pages/DashboardPage/DashboardPage";
+import ProtectedRoute from "./components/ProtectedRoute";
+import "./main.css";
 
 const RoutesComponent = () => {
-  const { user } = useAuth();
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route
-        path="/home"
-        element={user ? <HomePage /> : <Navigate to="/login" />}
-      />
+      <Route path="/home" element={<ProtectedRoute element={<HomePage />} />} />
       <Route
         path="/products"
-        element={user ? <ProductsPage /> : <Navigate to="/login" />}
+        element={<ProtectedRoute element={<ProductsPage />} />}
       />
       <Route
         path="/users"
-        element={user ? <UsersPage /> : <Navigate to="/login" />}
+        element={
+          <ProtectedRoute
+            element={<UsersPage />}
+            allowedRoles={["ROLE_ADMIN"]}
+          />
+        }
       />
       <Route
         path="/dashboard"
-        element={user ? <DashboardPage /> : <Navigate to="/login" />}
+        element={
+          <ProtectedRoute
+            element={<DashboardPage />}
+            allowedRoles={["ROLE_ADMIN"]}
+          />
+        }
       />
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>

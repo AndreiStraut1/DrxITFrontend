@@ -12,7 +12,7 @@ function PSHPopup(props: PSHPopupProps) {
     <div className="popup">
       <div className="popup-inner">
         <button className="close-btn" onClick={() => props.setTrigger(false)}>
-          close
+          &times;
         </button>
         {props.children}
       </div>

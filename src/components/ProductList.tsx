@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { useAuth } from "../context/useAuth";
 import PSHPopup from "./PSHPopup";
 import { Product } from "../models/Product";
@@ -22,6 +22,7 @@ const options = [
 ];
 
 interface ProductListProps {
+  materialsRefreshFlag: boolean;
   refresh: boolean;
   onMoveToNextStage: () => void;
 }
@@ -29,7 +30,16 @@ interface ProductListProps {
 const ProductList: React.FC<ProductListProps> = ({
   refresh,
   onMoveToNextStage,
+  materialsRefreshFlag,
 }) => {
+  const [localRefresh, setLocalRefresh] = useState(false);
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [selectedMaterialForBom, setSelectedMaterialForBom] =
+    useState<any>(null);
+  const [showMaterialSelector, setShowMaterialSelector] =
+    useState<boolean>(false);
+  const [showProductEdit, setShowProductEdit] = useState<boolean>(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [filters, setFilters] = useState({
     stages: [] as SelectOption[],
     materials: [] as SelectOption[],
@@ -59,6 +69,171 @@ const ProductList: React.FC<ProductListProps> = ({
 
   const [bomPopup, setBomPopup] = useState(false);
   const [selectedBom, setSelectedBom] = useState<Bom | null>(null);
+
+  useEffect(() => {
+    axios
+      .get("http://localhost:8080/api/material", {
+        headers: accessToken ? { Authorization: "Bearer " + accessToken } : {},
+      })
+      .then((response) => {
+        setMaterials(response.data);
+      })
+      .catch((err) => {
+        toast.error(
+          "Error fetching materials: " + (err.response?.data || err.message)
+        );
+      });
+  }, [accessToken, materialsRefreshFlag, refresh, localRefresh]);
+
+  const MaterialSelector = () => {
+    const [searchedMaterial, setSearchedMaterial] = useState("");
+
+    const filteredMaterials = materials.filter(
+      (m) =>
+        m.materialNumber
+          .toLowerCase()
+          .includes(searchedMaterial.toLowerCase()) ||
+        m.materialDescription
+          .toLowerCase()
+          .includes(searchedMaterial.toLowerCase())
+    );
+
+    return (
+      <>
+        <div
+          className="modal show d-block"
+          tabIndex={-1}
+          style={{
+            zIndex: 99999,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+          }}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered"
+            style={{ zIndex: 99999 }}
+          >
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Select Material</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowMaterialSelector(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Select Material</label>
+                  <div className="input-group">
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Search materials..."
+                      value={searchedMaterial}
+                      onChange={(e) => setSearchedMaterial(e.target.value)}
+                    />
+                    <select
+                      className="form-select"
+                      onChange={(e) => {
+                        const selected = materials.find(
+                          (m) => m.materialNumber === e.target.value
+                        );
+                        if (selected) {
+                          setSelectedMaterialForBom(selected);
+                        }
+                      }}
+                      value={selectedMaterialForBom?.materialNumber || ""}
+                    >
+                      <option value="">Select a material</option>
+                      {filteredMaterials.map((material) => (
+                        <option
+                          key={material.materialNumber}
+                          value={material.materialNumber}
+                        >
+                          {material.materialNumber} -{" "}
+                          {material.materialDescription}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <small className="text-muted">
+                    Type to search by material number or description
+                  </small>
+                </div>
+
+                {selectedMaterialForBom && (
+                  <div className="alert alert-info">
+                    <strong>Selected:</strong>{" "}
+                    {selectedMaterialForBom.materialNumber} -{" "}
+                    {selectedMaterialForBom.materialDescription}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowMaterialSelector(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={addSelectedMaterialToBom}
+                  disabled={!selectedMaterialForBom}
+                >
+                  Add Material
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  const addSelectedMaterialToBom = () => {
+    if (!selectedMaterialForBom || !selectedProduct) return;
+
+    const newBomMaterial = {
+      id: -1,
+      material: {
+        materialNumber: selectedMaterialForBom.materialNumber,
+        materialDescription: selectedMaterialForBom.materialDescription,
+        width: selectedMaterialForBom.width,
+        height: selectedMaterialForBom.height,
+        weight: selectedMaterialForBom.weight,
+      },
+      quantity: 1,
+      unitMeasureCode: "pcs",
+    };
+
+    if (selectedProduct.bom) {
+      setSelectedProduct({
+        ...selectedProduct,
+        bom: {
+          ...selectedProduct.bom,
+          bomMaterials: [
+            ...(selectedProduct.bom.bomMaterials || []),
+            newBomMaterial,
+          ],
+        },
+      });
+    } else {
+      setSelectedProduct({
+        ...selectedProduct,
+        bom: {
+          id: -1,
+          name: "New BOM",
+          bomMaterials: [newBomMaterial],
+        },
+      });
+    }
+
+    setShowMaterialSelector(false);
+    setSelectedMaterialForBom(null);
+  };
 
   const getMaterialOptions = () => {
     const uniqueMaterials = new Set<string>();
@@ -193,6 +368,7 @@ const ProductList: React.FC<ProductListProps> = ({
       )
       .then(() => {
         onMoveToNextStage();
+        toast.success("Product stage changed!");
       })
       .catch((err) => {
         toast.error(
@@ -234,13 +410,11 @@ const ProductList: React.FC<ProductListProps> = ({
                 })
             )
           ).then((stages) => {
-            // Update each product with its current stage
             const updatedProducts = productsData.map((prod, index) => ({
               ...prod,
               currentStage: stages[index],
             }));
             setProducts(updatedProducts);
-            console.log(products);
           });
         } else {
           setError(response.data);
@@ -251,7 +425,7 @@ const ProductList: React.FC<ProductListProps> = ({
           err.response ? JSON.stringify(err.response.data) : err.message
         );
       });
-  }, [accessToken, refresh]);
+  }, [accessToken, refresh, materialsRefreshFlag, localRefresh]);
 
   const toggleVisibility = (prodId: number) => {
     setVisibilityMap((prev) => ({
@@ -291,7 +465,7 @@ const ProductList: React.FC<ProductListProps> = ({
         headers: accessToken ? { Authorization: "Bearer " + accessToken } : {},
       })
       .then(() => {
-        setProducts(products.filter((product) => product.id !== productId)); // Remove product from UI
+        setProducts(products.filter((product) => product.id !== productId));
       })
       .catch((err) => {
         toast.error(
@@ -300,7 +474,55 @@ const ProductList: React.FC<ProductListProps> = ({
       });
   };
 
+  const handleSaveProductChanges = async () => {
+    if (!selectedProduct) return;
+
+    try {
+      const productToSave = {
+        ...selectedProduct,
+        bom: selectedProduct.bom
+          ? {
+              ...selectedProduct.bom,
+              bomMaterials: selectedProduct.bom.bomMaterials?.map(
+                (material) => ({
+                  material: {
+                    materialNumber: material.material.materialNumber,
+                    materialDescription: material.material.materialDescription,
+                  },
+                  quantity: material.quantity,
+                  unitMeasureCode: material.unitMeasureCode || "pcs",
+                })
+              ),
+            }
+          : null,
+      };
+
+      const response = await axios.put(
+        `http://localhost:8080/api/products/${selectedProduct.id}`,
+        productToSave,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+
+      setProducts((prevProducts) =>
+        prevProducts.map((p) =>
+          p.id === selectedProduct.id ? response.data : p
+        )
+      );
+      setSelectedProduct(response.data);
+
+      setLocalRefresh((prev) => !prev);
+      setShowProductEdit(false);
+      toast.success("Product updated successfully");
+    } catch (err: any) {
+      console.error("Error details:", err.response?.data);
+      toast.error(`Error: ${err.response?.data || err.message}`);
+    }
+  };
+
   const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isDesigner = user?.roles?.includes("ROLE_DESIGNER");
 
   const openStageHistory = (productId: number) => {
     setSelectedProductId(productId);
@@ -309,12 +531,6 @@ const ProductList: React.FC<ProductListProps> = ({
 
   return (
     <div className="container mt-3">
-      <h2 className="mb-4">Products</h2>
-      {error && (
-        <div className="alert alert-danger" role="alert">
-          Error: {error}
-        </div>
-      )}
       <div className="container mt-3">
         <h2 className="mb-4">Products</h2>
         {error && <div className="alert alert-danger">Error: {error}</div>}
@@ -520,12 +736,16 @@ const ProductList: React.FC<ProductListProps> = ({
                       View BOM
                     </button>
 
-                    {isAdmin && (
+                    {(isAdmin || isDesigner) && (
                       <button
-                        className="btn btn-danger mt-2 w-100"
-                        onClick={() => handleDelete(product.id)}
+                        type="button"
+                        className="btn btn-outline-primary mt-2 w-100"
+                        onClick={() => {
+                          setShowProductEdit(true);
+                          setSelectedProduct(product);
+                        }}
                       >
-                        Delete Product
+                        <i className="bi bi-tools me-1"></i> Edit Product
                       </button>
                     )}
                   </div>
@@ -543,6 +763,338 @@ const ProductList: React.FC<ProductListProps> = ({
           <PSHPopup trigger={bomPopup} setTrigger={setBomPopup}>
             {selectedBom && <BomList bomData={selectedBom} />}
           </PSHPopup>
+          {showProductEdit && (
+            <>
+              <div className="modal-backdrop fade show"></div>
+              <div className="modal show d-block" tabIndex={-1}>
+                <div className="modal-dialog modal-dialog-centered">
+                  <div className="modal-content">
+                    <div className="modal-header">
+                      <h5 className="modal-title">Edit Or Delete Product</h5>
+                      <button
+                        type="button"
+                        className="btn-close"
+                        onClick={() => setShowProductEdit(false)}
+                      ></button>
+                    </div>
+                    <div className="modal-body">
+                      <div className="mb-3">
+                        <label className="form-label">Product Name</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Enter product name..."
+                          value={selectedProduct?.name}
+                          onChange={(e) => {
+                            if (selectedProduct) {
+                              setSelectedProduct({
+                                ...selectedProduct,
+                                name: e.target.value,
+                              });
+                            }
+                          }}
+                          minLength={3}
+                          maxLength={50}
+                        />
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label">Description</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Enter description..."
+                          value={selectedProduct?.description}
+                          onChange={(e) => {
+                            if (selectedProduct) {
+                              setSelectedProduct({
+                                ...selectedProduct,
+                                description: e.target.value,
+                              });
+                            }
+                          }}
+                          minLength={5}
+                          maxLength={200}
+                        />
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label">Dimensions</label>
+                        <div className="row mb-2">
+                          <div className="col-6">
+                            <div className="input-group">
+                              <span className="input-group-text">Height</span>
+                              <input
+                                type="number"
+                                className="form-control"
+                                value={selectedProduct?.estimated_height || ""}
+                                onChange={(e) => {
+                                  if (selectedProduct) {
+                                    setSelectedProduct({
+                                      ...selectedProduct,
+                                      estimated_height: Number(e.target.value),
+                                    });
+                                  }
+                                }}
+                                min="0"
+                              />
+                            </div>
+                          </div>
+                          <div className="col-6">
+                            <div className="input-group">
+                              <span className="input-group-text">Width</span>
+                              <input
+                                type="number"
+                                className="form-control"
+                                value={selectedProduct?.estimated_width || ""}
+                                onChange={(e) => {
+                                  if (selectedProduct) {
+                                    setSelectedProduct({
+                                      ...selectedProduct,
+                                      estimated_width: Number(e.target.value),
+                                    });
+                                  }
+                                }}
+                                min="0"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="row">
+                          <div className="col-6">
+                            <div className="input-group">
+                              <span className="input-group-text">Weight</span>
+                              <input
+                                type="number"
+                                className="form-control"
+                                value={selectedProduct?.estimated_weight || ""}
+                                onChange={(e) => {
+                                  if (selectedProduct) {
+                                    setSelectedProduct({
+                                      ...selectedProduct,
+                                      estimated_weight: Number(e.target.value),
+                                    });
+                                  }
+                                }}
+                                min="0"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label">BOM Details</label>
+                        <div className="input-group mb-2">
+                          <span className="input-group-text">BOM Name</span>
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={selectedProduct?.bom?.name || ""}
+                            onChange={(e) => {
+                              if (selectedProduct && selectedProduct.bom) {
+                                setSelectedProduct({
+                                  ...selectedProduct,
+                                  bom: {
+                                    ...selectedProduct.bom,
+                                    name: e.target.value,
+                                  },
+                                });
+                              } else if (selectedProduct) {
+                                setSelectedProduct({
+                                  ...selectedProduct,
+                                  bom: {
+                                    id: -1,
+                                    name: e.target.value,
+                                    bomMaterials: [],
+                                  },
+                                });
+                              }
+                            }}
+                            minLength={3}
+                            maxLength={50}
+                          />
+                        </div>
+
+                        <div className="mt-3">
+                          <label className="form-label">Materials</label>
+                          {selectedProduct?.bom?.bomMaterials &&
+                          selectedProduct.bom.bomMaterials.length > 0 ? (
+                            <div className="table-responsive">
+                              <table className="table table-bordered table-sm">
+                                <thead>
+                                  <tr>
+                                    <th>Material Number</th>
+                                    <th>Name</th>
+                                    <th>Quantity</th>
+                                    <th>Unit</th>
+                                    <th>Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {selectedProduct.bom.bomMaterials.map(
+                                    (bomMaterial, index) => (
+                                      <tr key={index}>
+                                        <td>
+                                          {bomMaterial.material.materialNumber}
+                                        </td>
+                                        <td>
+                                          {
+                                            bomMaterial.material
+                                              .materialDescription
+                                          }
+                                        </td>
+                                        <td>
+                                          <input
+                                            type="number"
+                                            className="form-control form-control-sm"
+                                            value={bomMaterial.quantity || 0}
+                                            onChange={(e) => {
+                                              if (
+                                                selectedProduct &&
+                                                selectedProduct.bom
+                                              ) {
+                                                const updatedMaterials = [
+                                                  ...selectedProduct.bom
+                                                    .bomMaterials,
+                                                ];
+                                                updatedMaterials[index] = {
+                                                  ...updatedMaterials[index],
+                                                  quantity: Number(
+                                                    e.target.value
+                                                  ),
+                                                };
+
+                                                setSelectedProduct({
+                                                  ...selectedProduct,
+                                                  bom: {
+                                                    ...selectedProduct.bom,
+                                                    bomMaterials:
+                                                      updatedMaterials,
+                                                  },
+                                                });
+                                              }
+                                            }}
+                                            min="1"
+                                          />
+                                        </td>
+                                        <td>
+                                          <input
+                                            type="text"
+                                            className="form-control form-control-sm"
+                                            value={
+                                              bomMaterial.unitMeasureCode || ""
+                                            }
+                                            minLength={1}
+                                            maxLength={20}
+                                            onChange={(e) => {
+                                              if (
+                                                selectedProduct &&
+                                                selectedProduct.bom
+                                              ) {
+                                                const updatedMaterials = [
+                                                  ...selectedProduct.bom
+                                                    .bomMaterials,
+                                                ];
+                                                updatedMaterials[index] = {
+                                                  ...updatedMaterials[index],
+                                                  unitMeasureCode:
+                                                    e.target.value,
+                                                };
+
+                                                setSelectedProduct({
+                                                  ...selectedProduct,
+                                                  bom: {
+                                                    ...selectedProduct.bom,
+                                                    bomMaterials:
+                                                      updatedMaterials,
+                                                  },
+                                                });
+                                              }
+                                            }}
+                                          />
+                                        </td>
+                                        <td className="text-center">
+                                          <button
+                                            className="btn btn-sm btn-danger"
+                                            onClick={() => {
+                                              if (
+                                                selectedProduct &&
+                                                selectedProduct.bom
+                                              ) {
+                                                const updatedMaterials =
+                                                  selectedProduct.bom.bomMaterials.filter(
+                                                    (_, i) => i !== index
+                                                  );
+                                                setSelectedProduct({
+                                                  ...selectedProduct,
+                                                  bom: {
+                                                    ...selectedProduct.bom,
+                                                    bomMaterials:
+                                                      updatedMaterials,
+                                                  },
+                                                });
+                                              }
+                                            }}
+                                          >
+                                            &times;
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    )
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <p className="text-muted">
+                              No materials associated with this BOM.
+                            </p>
+                          )}
+
+                          <div className="mt-3">
+                            <button
+                              className="btn btn-outline-primary"
+                              onClick={() => setShowMaterialSelector(true)}
+                            >
+                              Add Material
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="modal-footer">
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setShowProductEdit(false)}
+                      >
+                        Close
+                      </button>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className="btn btn-danger"
+                          onClick={() => {
+                            selectedProduct && handleDelete(selectedProduct.id);
+                            setShowProductEdit(false);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={handleSaveProductChanges}
+                      >
+                        Save changes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {showMaterialSelector && <MaterialSelector />}
+            </>
+          )}
         </div>
       )}
     </div>

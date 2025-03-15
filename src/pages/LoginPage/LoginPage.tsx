@@ -1,4 +1,3 @@
-import React, { useEffect } from "react";
 import * as Yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useAuth } from "../../context/useAuth";
@@ -69,11 +68,6 @@ const LoginPage = (props: Props) => {
                 {errors.password && (
                   <p className="text-danger">{errors.password.message}</p>
                 )}
-              </div>
-              <div className="d-flex justify-content-between mb-3">
-                <a href="#" className="small">
-                  Forgot password?
-                </a>
               </div>
               <button type="submit" className="btn btn-primary w-100">
                 Sign in

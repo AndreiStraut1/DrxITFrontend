@@ -1,4 +1,3 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
 
@@ -45,7 +44,10 @@ const HomePage: React.FC = () => {
                 </button>
               )}
               {user?.roles.includes("ROLE_ADMIN") && (
-                <button className="btn btn-info ms-2" onClick={handleDashboard}>
+                <button
+                  className="btn btn-primary ms-2"
+                  onClick={handleDashboard}
+                >
                   Analytics Dashboard
                 </button>
               )}

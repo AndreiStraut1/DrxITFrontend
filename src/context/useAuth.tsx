@@ -78,7 +78,6 @@ export const UserProvider = ({ children }: Props) => {
         const userObj = {
           username: res.data.username,
           email: res.data.email,
-          // Ensure roles is an array: if it's not an array, wrap it in one
           roles: Array.isArray(res.data.roles)
             ? res.data.roles
             : [res.data.roles || ""],

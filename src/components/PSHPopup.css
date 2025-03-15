@@ -19,9 +19,13 @@
     max-width: 640px;
     background-color: #FFF;
     border-radius: 8px;
+    max-height: 80vh;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .popup-inner .close-btn {
+    position: sticky;
     border: 0;
     border-radius: 8px;
     background-color: #dd3544;

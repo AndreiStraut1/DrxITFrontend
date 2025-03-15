@@ -36,10 +36,8 @@ const UserList: React.FC<UserListProps> = ({ refresh, onRoleChange }) => {
     {}
   );
 
-  const [isVisible, setIsVisible] = useState(false);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const { accessToken } = useAuth();
   const { user } = useAuth();
 
@@ -61,13 +59,6 @@ const UserList: React.FC<UserListProps> = ({ refresh, onRoleChange }) => {
           err.response ? JSON.stringify(err.response.data) : err.message
         );
       });
-  };
-
-  const toggleVisibility = (userId: number) => {
-    setVisibilityMap((prev) => ({
-      ...prev,
-      [userId]: !prev[userId],
-    }));
   };
 
   const handleRoleSelectionChange = (
@@ -125,9 +116,6 @@ const UserList: React.FC<UserListProps> = ({ refresh, onRoleChange }) => {
         );
       });
   }, [accessToken, refresh]);
-
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
-  const [value, setValue] = useState<SelectOption[]>([options[0]]);
 
   return (
     <div className="container mt-4">

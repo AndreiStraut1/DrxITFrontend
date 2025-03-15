@@ -5,12 +5,12 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
 
 const ProductPage: React.FC = () => {
+  const materialsRefreshFlag = false;
   const [refresh, setRefresh] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const handlePageRefresh = () => {
-    // Toggle the refresh flag to force ProductList to update
     setRefresh((prev) => !prev);
   };
 
@@ -20,14 +20,22 @@ const ProductPage: React.FC = () => {
 
   return (
     <div>
-      <button className="btn btn-primary ms-2" onClick={handleHomePage}>
+      <button className="btn btn-primary ms-2 mt-3" onClick={handleHomePage}>
         Back to HomePage
       </button>
       {(user?.roles.includes("ROLE_ADMIN") ||
         user?.roles.includes("ROLE_DESIGNER")) && (
-        <CreateProduct onProductCreated={handlePageRefresh} />
+        <CreateProduct
+          onMaterialChange={handlePageRefresh}
+          onProductCreated={handlePageRefresh}
+          materialsRefreshFlag={false}
+        />
       )}
-      <ProductList refresh={refresh} onMoveToNextStage={handlePageRefresh} />
+      <ProductList
+        materialsRefreshFlag={materialsRefreshFlag}
+        refresh={refresh}
+        onMoveToNextStage={handlePageRefresh}
+      />
     </div>
   );
 };

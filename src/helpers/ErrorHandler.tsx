@@ -5,22 +5,18 @@ export const handleError = (error: any) => {
   if (axios.isAxiosError(error)) {
     const { response } = error;
     if (response) {
-      // Check for 401 status first
       if (response.status === 401) {
         toast.warning("User does not exist or unauthorized");
-        // Optionally redirect:
         window.history.pushState({}, "LoginPage", "/login");
         return;
       }
 
       if (error.response?.status === 400) {
-        // Check if the response contains a specific error message
         const errorMessage =
           error.response.data?.message || "User already exists";
         toast.warning(errorMessage);
       }
 
-      // Then handle other error formats
       if (Array.isArray(response.data?.errors)) {
         response.data.errors.forEach((val: any) => {
           toast.warning(val.description);

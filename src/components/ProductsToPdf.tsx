@@ -143,16 +143,11 @@ const ProductPdfExport: React.FC<ProductPdfExportProps> = ({
   products,
   className,
 }) => {
-  const [isGenerating, setIsGenerating] = useState(false);
-
   const handleExport = () => {
-    setIsGenerating(true);
     try {
       ProductPdfGenerator.generateProductCatalog(products);
     } catch (error) {
       console.error("Error generating detailed PDF:", error);
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -163,22 +158,10 @@ const ProductPdfExport: React.FC<ProductPdfExportProps> = ({
           className="btn btn-primary"
           type="button"
           onClick={handleExport}
-          disabled={isGenerating}
         >
-          {isGenerating ? (
-            <>
-              <span
-                className="spinner-border spinner-border-sm me-2"
-                role="status"
-                aria-hiddeb="true"
-              ></span>
-              Generating PDF...
-            </>
-          ) : (
-            <>
-              <i className="bi bi-file-earmark-pdf me-1"></i> Export PDF
-            </>
-          )}
+          <>
+            <i className="bi bi-file-earmark-pdf me-1"></i> Export PDF
+          </>
         </button>
 
         <ul className="dropdown-menu" aria-labelledby="pdfExportDropdown">
