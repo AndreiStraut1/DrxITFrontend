@@ -385,9 +385,6 @@ const ProductList: React.FC<ProductListProps> = ({
       .then((response) => {
         if (Array.isArray(response.data)) {
           const productsData: Product[] = response.data;
-          const bomData: Bom[] = productsData
-            .map((x) => x.bom)
-            .filter((bom): bom is Bom => bom !== undefined);
           Promise.all(
             productsData.map((prod) =>
               axios
@@ -421,8 +418,10 @@ const ProductList: React.FC<ProductListProps> = ({
         }
       })
       .catch((err) => {
-        toast.error(
-          err.response ? JSON.stringify(err.response.data) : err.message
+        toast.warning(
+          err.response
+            ? JSON.stringify("No products to show or " + err.response.data)
+            : err.message
         );
       });
   }, [accessToken, refresh, materialsRefreshFlag, localRefresh]);
@@ -945,7 +944,7 @@ const ProductList: React.FC<ProductListProps> = ({
                                           <input
                                             type="number"
                                             className="form-control form-control-sm"
-                                            value={bomMaterial.quantity || 0}
+                                            value={bomMaterial.quantity || 1}
                                             onChange={(e) => {
                                               if (
                                                 selectedProduct &&

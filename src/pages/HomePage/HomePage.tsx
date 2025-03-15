@@ -17,6 +17,31 @@ const HomePage: React.FC = () => {
     navigate("/dashboard");
   };
 
+  const hasNonUserRoles = () => {
+    if (!user || !user.roles) return false;
+
+    if (Array.isArray(user.roles)) {
+      return (
+        user.roles.some((role) => role !== "ROLE_USER") ||
+        !user.roles.includes("ROLE_USER")
+      );
+    } else if (typeof user.roles === "string") {
+      return user.roles !== "ROLE_USER";
+    }
+    return false;
+  };
+
+  const hasOnlyUserRole = () => {
+    if (!user || !user.roles) return false;
+
+    if (Array.isArray(user.roles)) {
+      return user.roles.length === 1 && user.roles[0] === "ROLE_USER";
+    } else if (typeof user.roles === "string") {
+      return user.roles === "ROLE_USER";
+    }
+    return false;
+  };
+
   return (
     <div className="container mt-5">
       <div className="card shadow-sm">
@@ -32,12 +57,26 @@ const HomePage: React.FC = () => {
               <p className="lead">
                 Role: <strong>{user.roles}</strong>
               </p>
+              {hasOnlyUserRole() && (
+                <p>
+                  <strong>
+                    You have standard user privileges. Please wait until an
+                    administrator assigns you a role.
+                  </strong>
+                </p>
+              )}
               <button className="btn btn-danger" onClick={logout}>
                 Logout
               </button>
-              <button className="btn btn-primary ms-2" onClick={handleProducts}>
-                View Products
-              </button>
+
+              {hasNonUserRoles() && (
+                <button
+                  className="btn btn-primary ms-2"
+                  onClick={handleProducts}
+                >
+                  View Products
+                </button>
+              )}
               {user?.roles.includes("ROLE_ADMIN") && (
                 <button className="btn btn-primary ms-2" onClick={handleUsers}>
                   View Users
